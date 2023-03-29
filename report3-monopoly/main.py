@@ -155,7 +155,7 @@ class GameState:
             player.pay(200)
         elif action == 'GOTO_JAIL':
             player.pay(100)
-            player.cell_no = 9 # index of jail in board
+            player.cell_no = 9  # index of jail in board
         elif action == 'PAY':
             player.pay(100)
         elif action == 'UPGRADE':
@@ -223,9 +223,8 @@ class Monopoly:
 
                 # we compute value for every possible chance node
                 value, move = self.expecti_minimax(chance_state, 'MIN', depth + 1)
-                total_value += value * self.get_chance(i)
                 if total_value > v:
-                    v = total_value
+                    v = value
                     m = chance_state
 
             return v, m
@@ -244,30 +243,32 @@ class Monopoly:
 
                 # we compute value for every possible chance node
                 value, move = self.expecti_minimax(chance_state, 'MAX', depth + 1)
-                total_value += value * self.get_chance(i)
-                if total_value < v:
-                    v = total_value
+                if value < v:
+                    v = value
                     m = chance_state
 
             return v, m
 
         if state.player_turn == 'CHANCE':
+            total_value = 0
             if to_move == 'MAX':
                 value, move = -1 * math.inf, None
                 for action in state.get_actions(state.board[state.players[0].cell_no], state.players[0]):
                     v, m = self.expecti_minimax(state.result(0, state.players[0].cell_no, action), 'CHANCE', depth + 1)
+                    total_value += value
                     if v > value:
                         value = v
                         move = m
-                return value, move
+                return total_value, move
             else:
                 value, move = math.inf, None
                 for action in state.get_actions(state.board[state.players[1].cell_no], state.players[1]):
                     v, m = self.expecti_minimax(state.result(1, state.players[1].cell_no, action), 'CHANCE', depth + 1)
+                    total_value += value
                     if v < value:
                         value = v
                         move = m
-                return value, move
+                return total_value, move
 
 
 class Main:
