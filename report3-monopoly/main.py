@@ -1,6 +1,7 @@
 import copy
 import math
 import random
+import cells_info
 
 
 class Player:
@@ -39,31 +40,53 @@ class Cell:
             self.buildings = 0
 
     def can_purchase(self, player: Player):
-        return player.check_balance(CELLS_INFO[self.title]['PRICE'])
+        if self.type == 'PLACE':
+            return player.check_balance(cells_info.CELLS_INFO[self.title]['PRICE'])
+        else:
+            return player.check_balance(self.price)
 
     def purchase(self, player: Player):
-        player.pay(CELLS_INFO[self.title]['PRICE'])
+        if self.type == 'PLACE':
+            player.pay(cells_info.CELLS_INFO[self.title]['PRICE'])
+        else:
+            player.pay(self.price)
         self.owner = player
 
     def pay_rent(self, player: Player):
-        amount = get_rent_property(CELLS_INFO[self.title], self.buildings)
+        amount = self.get_rent_property(cells_info.CELLS_INFO[self.title], self.buildings)
         player.pay(amount)
         self.owner.increase(amount)
 
     def get_rent_price(self):
         if self.type == 'PLACE':
-            return get_rent_property(CELLS_INFO[self.title], self.buildings)
+            return self.get_rent_property(cells_info.CELLS_INFO[self.title], self.buildings)
         return self.price
 
     def is_upgradable(self, player: Player):
         if self.type == 'PLACE' and self.buildings < 5 and self.owner.name == player.name:
-            if self.owner.check_balance(CELLS_INFO[self.title]['PRICE_PER_HOUSE']):
+            if self.owner.check_balance(cells_info.CELLS_INFO[self.title]['PRICE_PER_HOUSE']):
                 return True
         return False
 
     def upgrade(self):
-        self.owner.pay(CELLS_INFO[self.title]['PRICE_PER_HOUSE'])
+        self.owner.pay(cells_info.CELLS_INFO[self.title]['PRICE_PER_HOUSE'])
         self.buildings += 1
+
+    def get_rent_property(self, cell_info, buildings):
+        if buildings == 0:
+            return cell_info['RENT']
+        elif buildings == 1:
+            return cell_info['RENT_ONE_HOUSE']
+        elif buildings == 2:
+            return cell_info['RENT_TWO_HOUSES']
+        elif buildings == 3:
+            return cell_info['RENT_THREE_HOUSES']
+        elif buildings == 4:
+            return cell_info['RENT_FOUR_HOUSES']
+        elif buildings == 5:
+            return cell_info['RENT_HOTEL']
+        else:
+            return cell_info['RENT']
 
 
 class GameState:
@@ -71,6 +94,22 @@ class GameState:
         self.board = board
         self.players = players
         self.player_turn = player_turn
+
+    def get_rent_property(self, cell_info, buildings):
+        if buildings == 0:
+            return cell_info['RENT']
+        elif buildings == 1:
+            return cell_info['RENT_ONE_HOUSE']
+        elif buildings == 2:
+            return cell_info['RENT_TWO_HOUSES']
+        elif buildings == 3:
+            return cell_info['RENT_THREE_HOUSES']
+        elif buildings == 4:
+            return cell_info['RENT_FOUR_HOUSES']
+        elif buildings == 5:
+            return cell_info['RENT_HOTEL']
+        else:
+            return cell_info['RENT']
 
     def is_terminal(self):
         empty_players = 0
@@ -93,10 +132,12 @@ class GameState:
             value = player.wallet
             for cell_no, cell in enumerate(self.board):
                 cell: Cell = cell
-                if cell.owner.name == player.name:
-                    value += get_rent_property(CELLS_INFO[cell.title], cell.buildings)
+                if cell.owner is not None and cell.owner.name == player.name:
+                    if cell.type == 'PLACE':
+                        value += self.get_rent_property(cells_info.CELLS_INFO[cell.title], cell.buildings)
                 elif cell_no == player.cell_no:
-                    value -= get_rent_property(CELLS_INFO[cell.title], cell.buildings)
+                    if cell.type == 'PLACE':
+                        value -= self.get_rent_property(cells_info.CELLS_INFO[cell.title], cell.buildings)
             evals.append(value)
         return evals
 
@@ -210,9 +251,8 @@ class Monopoly:
             return state.eval(), None
 
         if state.player_turn == 'MAX':
-            v, m = -1 * math.inf, None
+            v, m = [-1 * math.inf] * len(state.players), None
             for i in range(2, 13):
-                total_value = 0
                 # after rolling the dice we are in the change node
                 new_cell = (state.players[0].cell_no + i) % len(state.board)
                 new_players = copy.deepcopy(state.players)
@@ -223,16 +263,15 @@ class Monopoly:
 
                 # we compute value for every possible chance node
                 value, move = self.expecti_minimax(chance_state, 'MIN', depth + 1)
-                if total_value > v:
+                if value[0] > v[0]:
                     v = value
                     m = chance_state
 
             return v, m
 
         if state.player_turn == 'MIN':
-            v, m = math.inf, None
+            v, m = [math.inf] * len(state.players), None
             for i in range(2, 13):
-                total_value = 0
                 # after rolling the dice we are in the change node
                 new_cell = (state.players[1].cell_no + i) % len(state.board)
                 new_players = copy.deepcopy(state.players)
@@ -243,29 +282,31 @@ class Monopoly:
 
                 # we compute value for every possible chance node
                 value, move = self.expecti_minimax(chance_state, 'MAX', depth + 1)
-                if value < v:
+                if value[1] < v[1]:
                     v = value
                     m = chance_state
 
             return v, m
 
         if state.player_turn == 'CHANCE':
-            total_value = 0
+            total_value = [0] * len(state.players)
             if to_move == 'MAX':
-                value, move = -1 * math.inf, None
+                value, move = [-1 * math.inf] * len(state.players), None
                 for action in state.get_actions(state.board[state.players[0].cell_no], state.players[0]):
                     v, m = self.expecti_minimax(state.result(0, state.players[0].cell_no, action), 'CHANCE', depth + 1)
-                    total_value += value
-                    if v > value:
+                    total_value[0] += v[0]
+                    total_value[1] += v[1]
+                    if v[0] > value[0]:
                         value = v
                         move = m
                 return total_value, move
             else:
-                value, move = math.inf, None
+                value, move = [math.inf] * len(state.players), None
                 for action in state.get_actions(state.board[state.players[1].cell_no], state.players[1]):
                     v, m = self.expecti_minimax(state.result(1, state.players[1].cell_no, action), 'CHANCE', depth + 1)
-                    total_value += value
-                    if v < value:
+                    total_value[0] += v[0]
+                    total_value[1] += v[1]
+                    if v[1] < value[1]:
                         value = v
                         move = m
                 return total_value, move
@@ -294,7 +335,7 @@ class Main:
                  Cell('PLACE', 'NEWYORK_AVENUE', 'ORANGE', None), Cell('PLACE', 'KENTUCKY_AVENUE', 'RED', None),
                  Cell('PLACE', 'IDIANA_AVENUE', 'RED', None), Cell('PLACE', 'ILLINOIS_AVENUE', 'RED', None),
                  Cell('RAILROAD', 'RO_RAILROAD', '', 200), Cell('PLACE', 'ATLANTIC_AVENUE', '', None),
-                 Cell('PLACE', 'VENTNOR_AVENUE', '', None), Cell('PLACE', 'Collect 200 and pass', '', None),
+                 Cell('PLACE', 'VENTNOR_AVENUE', '', None),
                  Cell('SERVICE', 'WATER_WORKS', '', 150), Cell('PLACE', 'MARVIN_GARDENS', '', None),
                  Cell('GOTO_JAIL', 'GO_TO_JAIL', '', None), Cell('PLACE', 'PACIFIC_AVENUE', 'GREEN', None),
                  Cell('PLACE', 'NORTH_CAROLINA_AVENUE', 'GREEN', None),
@@ -318,12 +359,15 @@ class Main:
         player_turn = 0
         # state = GameState(self.cells, self.players, 'MAX')
         monopoly = Monopoly(4)
+        print("===== Game Started =====")
         while True:
             dice = random.randint(1, 6) + random.randint(1, 6)
 
             # after rolling the dice we are in the change node
             new_cell = (self.players[player_turn].cell_no + dice) % len(self.cells)
             self.players[player_turn].cell_no = new_cell
+
+            print(f"player {player_turn} got {dice} and now it is at cell {new_cell}")
 
             state = GameState(self.cells, self.players, 'CHANCE')
 
@@ -341,265 +385,3 @@ class Main:
 
 Main().run()
 
-
-def get_rent_property(cell_info, buildings):
-    if buildings == 0:
-        return cell_info['RENT']
-    elif buildings == 1:
-        return cell_info['RENT_ONE_HOUSE']
-    elif buildings == 2:
-        return cell_info['RENT_TWO_HOUSES']
-    elif buildings == 3:
-        return cell_info['RENT_THREE_HOUSES']
-    elif buildings == 4:
-        return cell_info['RENT_FOUR_HOUSES']
-    elif buildings == 5:
-        return cell_info['RENT_HOTEL']
-    else:
-        return cell_info['RENT']
-
-
-CELLS_INFO = {
-    'MEDITERRANEAN_AVENUE': {
-        'PRICE': 60,
-        'PRICE_PER_HOUSE': 50,
-        'RENT': 2,
-        'RENT_ONE_HOUSE': 10,
-        'RENT_TWO_HOUSES': 30,
-        'RENT_THREE_HOUSES': 90,
-        'RENT_FOUR_HOUSES': 160,
-        'RENT_HOTEL': 250,
-        'MORTGAGE': 30,
-    },
-    'BALTIC_AVENUE': {
-        'PRICE': 60,
-        'PRICE_PER_HOUSE': 50,
-        'RENT': 4,
-        'RENT_ONE_HOUSE': 20,
-        'RENT_TWO_HOUSES': 60,
-        'RENT_THREE_HOUSES': 180,
-        'RENT_FOUR_HOUSES': 320,
-        'RENT_HOTEL': 450,
-        'MORTGAGE': 30,
-    },
-    'ORIENTAL_AVENUE': {
-        'PRICE': 100,
-        'PRICE_PER_HOUSE': 50,
-        'RENT': 6,
-        'RENT_ONE_HOUSE': 30,
-        'RENT_TWO_HOUSES': 90,
-        'RENT_THREE_HOUSES': 270,
-        'RENT_FOUR_HOUSES': 400,
-        'RENT_HOTEL': 550,
-        'MORTGAGE': 50,
-    },
-    'VERMONT_AVENUE': {
-        'PRICE': 100,
-        'PRICE_PER_HOUSE': 50,
-        'RENT': 6,
-        'RENT_ONE_HOUSE': 30,
-        'RENT_TWO_HOUSES': 90,
-        'RENT_THREE_HOUSES': 270,
-        'RENT_FOUR_HOUSES': 400,
-        'RENT_HOTEL': 550,
-        'MORTGAGE': 50,
-    },
-    'CONNECTICUT_AVENUE': {
-        'PRICE': 120,
-        'PRICE_PER_HOUSE': 50,
-        'RENT': 8,
-        'RENT_ONE_HOUSE': 40,
-        'RENT_TWO_HOUSES': 100,
-        'RENT_THREE_HOUSES': 300,
-        'RENT_FOUR_HOUSES': 450,
-        'RENT_HOTEL': 600,
-        'MORTGAGE': 60,
-    },
-    'STCHARLES_PLACE': {
-        'PRICE': 140,
-        'PRICE_PER_HOUSE': 100,
-        'RENT': 10,
-        'RENT_ONE_HOUSE': 50,
-        'RENT_TWO_HOUSES': 150,
-        'RENT_THREE_HOUSES': 450,
-        'RENT_FOUR_HOUSES': 625,
-        'RENT_HOTEL': 750,
-        'MORTGAGE': 70,
-    },
-    'STATES_AVENUE': {
-        'PRICE': 140,
-        'PRICE_PER_HOUSE': 100,
-        'RENT': 10,
-        'RENT_ONE_HOUSE': 50,
-        'RENT_TWO_HOUSES': 150,
-        'RENT_THREE_HOUSES': 450,
-        'RENT_FOUR_HOUSES': 625,
-        'RENT_HOTEL': 750,
-        'MORTGAGE': 70,
-    },
-    'VIRGINIA_AVENUE': {
-        'PRICE': 160,
-        'PRICE_PER_HOUSE': 100,
-        'RENT': 12,
-        'RENT_ONE_HOUSE': 60,
-        'RENT_TWO_HOUSES': 180,
-        'RENT_THREE_HOUSES': 500,
-        'RENT_FOUR_HOUSES': 700,
-        'RENT_HOTEL': 900,
-        'MORTGAGE': 80,
-    },
-    'STJAMES_PLACE': {
-        'PRICE': 180,
-        'PRICE_PER_HOUSE': 100,
-        'RENT': 14,
-        'RENT_ONE_HOUSE': 70,
-        'RENT_TWO_HOUSES': 200,
-        'RENT_THREE_HOUSES': 550,
-        'RENT_FOUR_HOUSES': 750,
-        'RENT_HOTEL': 950,
-        'MORTGAGE': 90,
-    },
-    'TENNESSEE_AVENUE': {
-        'PRICE': 180,
-        'PRICE_PER_HOUSE': 100,
-        'RENT': 14,
-        'RENT_ONE_HOUSE': 70,
-        'RENT_TWO_HOUSES': 200,
-        'RENT_THREE_HOUSES': 550,
-        'RENT_FOUR_HOUSES': 750,
-        'RENT_HOTEL': 950,
-        'MORTGAGE': 90,
-    },
-    'NEWYORK_AVENUE': {
-        'PRICE': 200,
-        'PRICE_PER_HOUSE': 100,
-        'RENT': 16,
-        'RENT_ONE_HOUSE': 80,
-        'RENT_TWO_HOUSES': 220,
-        'RENT_THREE_HOUSES': 600,
-        'RENT_FOUR_HOUSES': 800,
-        'RENT_HOTEL': 1000,
-        'MORTGAGE': 100,
-    },
-    'KENTUCKY_AVENUE': {
-        'PRICE': 220,
-        'PRICE_PER_HOUSE': 150,
-        'RENT': 18,
-        'RENT_ONE_HOUSE': 90,
-        'RENT_TWO_HOUSES': 250,
-        'RENT_THREE_HOUSES': 700,
-        'RENT_FOUR_HOUSES': 875,
-        'RENT_HOTEL': 1050,
-        'MORTGAGE': 110,
-    },
-    'IDIANA_AVENUE': {
-        'PRICE': 220,
-        'PRICE_PER_HOUSE': 150,
-        'RENT': 18,
-        'RENT_ONE_HOUSE': 90,
-        'RENT_TWO_HOUSES': 250,
-        'RENT_THREE_HOUSES': 700,
-        'RENT_FOUR_HOUSES': 875,
-        'RENT_HOTEL': 1050,
-        'MORTGAGE': 110,
-    },
-    'ILLINOIS_AVENUE': {
-        'PRICE': 240,
-        'PRICE_PER_HOUSE': 150,
-        'RENT': 20,
-        'RENT_ONE_HOUSE': 100,
-        'RENT_TWO_HOUSES': 300,
-        'RENT_THREE_HOUSES': 750,
-        'RENT_FOUR_HOUSES': 925,
-        'RENT_HOTEL': 1100,
-        'MORTGAGE': 120,
-    },
-    'ATLANTIC_AVENUE': {
-        'PRICE': 260,
-        'PRICE_PER_HOUSE': 150,
-        'RENT': 22,
-        'RENT_ONE_HOUSE': 110,
-        'RENT_TWO_HOUSES': 330,
-        'RENT_THREE_HOUSES': 800,
-        'RENT_FOUR_HOUSES': 975,
-        'RENT_HOTEL': 1150,
-        'MORTGAGE': 130,
-    },
-    'VENTNOR_AVENUE': {
-        'PRICE': 260,
-        'PRICE_PER_HOUSE': 150,
-        'RENT': 22,
-        'RENT_ONE_HOUSE': 110,
-        'RENT_TWO_HOUSES': 330,
-        'RENT_THREE_HOUSES': 800,
-        'RENT_FOUR_HOUSES': 975,
-        'RENT_HOTEL': 1150,
-        'MORTGAGE': 130,
-    },
-    'MARVIN_GARDENS': {
-        'PRICE': 280,
-        'PRICE_PER_HOUSE': 150,
-        'RENT': 24,
-        'RENT_ONE_HOUSE': 120,
-        'RENT_TWO_HOUSES': 360,
-        'RENT_THREE_HOUSES': 850,
-        'RENT_FOUR_HOUSES': 1025,
-        'RENT_HOTEL': 1200,
-        'MORTGAGE': 140,
-    },
-    'PACIFIC_AVENUE': {
-        'PRICE': 300,
-        'PRICE_PER_HOUSE': 200,
-        'RENT': 26,
-        'RENT_ONE_HOUSE': 130,
-        'RENT_TWO_HOUSES': 390,
-        'RENT_THREE_HOUSES': 900,
-        'RENT_FOUR_HOUSES': 1100,
-        'RENT_HOTEL': 1275,
-        'MORTGAGE': 150,
-    },
-    'NORTH_CAROLINA_AVENUE': {
-        'PRICE': 300,
-        'PRICE_PER_HOUSE': 200,
-        'RENT': 26,
-        'RENT_ONE_HOUSE': 130,
-        'RENT_TWO_HOUSES': 390,
-        'RENT_THREE_HOUSES': 900,
-        'RENT_FOUR_HOUSES': 1100,
-        'RENT_HOTEL': 1275,
-        'MORTGAGE': 150,
-    },
-    'PENNSYLVANIA_AVENUE': {
-        'PRICE': 320,
-        'PRICE_PER_HOUSE': 200,
-        'RENT': 28,
-        'RENT_ONE_HOUSE': 150,
-        'RENT_TWO_HOUSES': 450,
-        'RENT_THREE_HOUSES': 1000,
-        'RENT_FOUR_HOUSES': 1200,
-        'RENT_HOTEL': 1400,
-        'MORTGAGE': 160,
-    },
-    'PARK_PLACE': {
-        'PRICE': 350,
-        'PRICE_PER_HOUSE': 200,
-        'RENT': 35,
-        'RENT_ONE_HOUSE': 175,
-        'RENT_TWO_HOUSES': 500,
-        'RENT_THREE_HOUSES': 1100,
-        'RENT_FOUR_HOUSES': 1300,
-        'RENT_HOTEL': 1500,
-        'MORTGAGE': 175,
-    },
-    'BOARD_WALK': {
-        'PRICE': 400,
-        'PRICE_PER_HOUSE': 200,
-        'RENT': 50,
-        'RENT_ONE_HOUSE': 200,
-        'RENT_TWO_HOUSES': 600,
-        'RENT_THREE_HOUSES': 1400,
-        'RENT_FOUR_HOUSES': 1700,
-        'RENT_HOTEL': 2000,
-        'MORTGAGE': 200,
-    },
-}
