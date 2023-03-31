@@ -4,6 +4,18 @@ import random
 import cells_info
 
 
+class Copy:
+    def copy(self, board, players):
+        _players = []
+        _board = []
+        for player in players:
+            _players.append(player.clone())
+
+        for cell in board:
+            _board.append(cell.copy(_players))
+        return _players, _board
+
+
 class Player:
     def __init__(self, name, start_cell, wallet):
         self.name = name
@@ -88,6 +100,18 @@ class Cell:
         else:
             return cell_info['RENT']
 
+    def copy(self, players):
+        _cell = Cell(self.type, self.title, self.color, self.price)
+        _cell.buildings = self.buildings
+        if self.owner is None:
+            _cell.owner = None
+        else:
+            for player in players:
+                if self.owner.name == player.name:
+                    _cell.owner = player
+                    break
+        return _cell
+
 
 class GameState:
     def __init__(self, board, players, player_turn):
@@ -132,12 +156,13 @@ class GameState:
             value = player.wallet
             for cell_no, cell in enumerate(self.board):
                 cell: Cell = cell
-                if cell.owner is not None and cell.owner.name == player.name:
-                    if cell.type == 'PLACE':
-                        value += self.get_rent_property(cells_info.CELLS_INFO[cell.title], cell.buildings)
-                elif cell_no == player.cell_no:
-                    if cell.type == 'PLACE':
-                        value -= self.get_rent_property(cells_info.CELLS_INFO[cell.title], cell.buildings)
+                if cell.owner is not None:
+                    if cell.owner.name == player.name:
+                        if cell.type == 'PLACE':
+                            value += self.get_rent_property(cells_info.CELLS_INFO[cell.title], cell.buildings)
+                    elif cell_no == player.cell_no:
+                        if cell.type == 'PLACE':
+                            value -= self.get_rent_property(cells_info.CELLS_INFO[cell.title], cell.buildings)
             evals.append(value)
         return evals
 
@@ -160,23 +185,25 @@ class GameState:
             return ['']
         elif cell.type == 'SERVICE' or cell.type == 'RAILROAD':
             if cell.owner is None:
-                return ['BUY', '']
+                return ['BUY', 'DO NOTHING']
             elif cell.owner.name == player.name:
                 return ['']
             else:
                 return ['PAY']
         elif cell.type == 'PLACE':
             if cell.owner is None:
-                return ['BUY', '']
+                return ['BUY', 'DO NOTHING']
             elif cell.owner.name == player.name:
-                return ['UPGRADE', '']
+                return ['UPGRADE', 'DO NOTHING']
             else:
                 return ['PAY']
 
-    def result(self, player_index, cell_no, action):
-        board = copy.deepcopy(self.board)
-        players = copy.deepcopy(self.players)
+    def result(self, player_index, cell_no, action, depth):
+        players, board = Copy().copy(self.board, self.players)
         player = players[player_index]
+        if depth == 0:
+            print(player_index)
+            print(action, board[cell_no].title)
 
         player_turn = 'MAX'
         if self.player_turn == 'MAX' or self.player_turn == 'MIN':
@@ -245,7 +272,7 @@ class Monopoly:
 
     def expecti_minimax(self, state: GameState, to_move, depth):
         if state.is_terminal():
-            return state.utility(), None
+            return state.utility(), state
 
         if depth >= self.max_depth:
             return state.eval(), None
@@ -255,8 +282,7 @@ class Monopoly:
             for i in range(2, 13):
                 # after rolling the dice we are in the change node
                 new_cell = (state.players[0].cell_no + i) % len(state.board)
-                new_players = copy.deepcopy(state.players)
-                new_board = copy.deepcopy(state.board)
+                new_players, new_board = Copy().copy(state.board, state.players)
                 new_players[0].cell_no = new_cell
 
                 chance_state = GameState(new_board, new_players, 'CHANCE')
@@ -274,8 +300,7 @@ class Monopoly:
             for i in range(2, 13):
                 # after rolling the dice we are in the change node
                 new_cell = (state.players[1].cell_no + i) % len(state.board)
-                new_players = copy.deepcopy(state.players)
-                new_board = copy.deepcopy(state.board)
+                new_players, new_board = Copy().copy(state.board, state.players)
                 new_players[1].cell_no = new_cell
 
                 chance_state = GameState(new_board, new_players, 'CHANCE')
@@ -293,22 +318,24 @@ class Monopoly:
             if to_move == 'MAX':
                 value, move = [-1 * math.inf] * len(state.players), None
                 for action in state.get_actions(state.board[state.players[0].cell_no], state.players[0]):
-                    v, m = self.expecti_minimax(state.result(0, state.players[0].cell_no, action), 'CHANCE', depth + 1)
+                    temp_state = state.result(0, state.players[0].cell_no, action, depth)
+                    v, m = self.expecti_minimax(temp_state, 'CHANCE', depth + 1)
                     total_value[0] += v[0]
                     total_value[1] += v[1]
                     if v[0] > value[0]:
                         value = v
-                        move = m
+                        move = temp_state
                 return total_value, move
             else:
                 value, move = [math.inf] * len(state.players), None
                 for action in state.get_actions(state.board[state.players[1].cell_no], state.players[1]):
-                    v, m = self.expecti_minimax(state.result(1, state.players[1].cell_no, action), 'CHANCE', depth + 1)
+                    temp_state = state.result(1, state.players[1].cell_no, action, depth)
+                    v, m = self.expecti_minimax(temp_state, 'CHANCE', depth + 1)
                     total_value[0] += v[0]
                     total_value[1] += v[1]
                     if v[1] < value[1]:
                         value = v
-                        move = m
+                        move = temp_state
                 return total_value, move
 
 
@@ -320,7 +347,7 @@ class Main:
     def init_players(self):
         players = []
         for i in range(2):
-            players.append(Player(f'Player {i}', self.cells[0], 1500))
+            players.append(Player(f'Player {i}', self.cells[0], 150000))
         return players
 
     def init_cells(self):
@@ -356,6 +383,7 @@ class Main:
         print("===== Homayoun Zarei - 9822019 =====")
         print("===== Monopoly using Adversarial Search =====")
 
+        print(self.players[0].cell_no, self.players[1].cell_no)
         player_turn = 0
         # state = GameState(self.cells, self.players, 'MAX')
         monopoly = Monopoly(4)
@@ -371,16 +399,23 @@ class Main:
 
             state = GameState(self.cells, self.players, 'CHANCE')
 
-            value, state = monopoly.expecti_minimax(state, 'MIN', 0)
+            if player_turn == 0:
+                value, state = monopoly.expecti_minimax(state, 'MAX', 0)
+            else:
+                value, state = monopoly.expecti_minimax(state, 'MIN', 0)
+
+            self.players = state.players
+            self.cells = state.board
+
+            print(self.players[0].wallet, self.players[1].wallet)
 
             if state.is_terminal():
-                print()
                 print("===========================================")
                 print("Game ended")
-                print(value)
+                print(self.players[0].wallet, self.players[1].wallet)
                 break
 
-            player_turn = (player_turn + 1) % 2
+            player_turn = 1 - player_turn
 
 
 Main().run()
