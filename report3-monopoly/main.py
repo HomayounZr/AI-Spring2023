@@ -397,6 +397,7 @@ class Main:
             new_cell = (self.players[player_turn].cell_no + dice) % len(self.cells)
             self.players[player_turn].cell_no = new_cell
 
+            print("----------------------------------------------")
             print(f"player {player_turn} got {dice} and now it is at cell {new_cell}")
 
             state = GameState(self.cells, self.players, 'CHANCE')
@@ -412,7 +413,7 @@ class Main:
             print(self.players[0].wallet, self.players[1].wallet)
 
             if state.is_terminal():
-                print("===========================================")
+                print("==============================================")
                 print("Game ended")
                 print(self.players[0].wallet, self.players[1].wallet)
                 break
