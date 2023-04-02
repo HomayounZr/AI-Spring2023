@@ -65,7 +65,11 @@ class Cell:
         self.owner = player
 
     def pay_rent(self, player: Player):
-        amount = self.get_rent_property(cells_info.CELLS_INFO[self.title], self.buildings)
+        amount = 0
+        if self.type == 'PLACE':
+            amount = self.get_rent_property(cells_info.CELLS_INFO[self.title], self.buildings)
+        elif self.type == 'RAILROAD' or self.type == 'SERVICE':
+            amount = 100
         player.pay(amount)
         self.owner.increase(amount)
 
@@ -184,19 +188,19 @@ class GameState:
         elif cell.type == 'GOTO_JAIL':
             return ['JAIL']
         elif cell.type == 'JAIL':
-            return ['']
+            return ['VISITING JAIL']
         elif cell.type == 'SERVICE' or cell.type == 'RAILROAD':
             if cell.owner is None:
-                return ['BUY', 'DO NOTHING']
+                return ['BUY'] # ['BUY', 'DO NOTHING']
             elif cell.owner.name == player.name:
                 return ['DO NOTHING']
             else:
                 return ['PAY']
         elif cell.type == 'PLACE':
             if cell.owner is None:
-                return ['BUY', 'DO NOTHING']
+                return ['BUY'] # ['BUY', 'DO NOTHING']
             elif cell.owner.name == player.name:
-                return ['UPGRADE', 'DO NOTHING']
+                return ['UPGRADE'] # ['UPGRADE', 'DO NOTHING']
             else:
                 return ['PAY']
 
@@ -204,8 +208,7 @@ class GameState:
         players, board = Copy().copy(self.board, self.players)
         player = players[player_index]
         if depth == 0:
-            print(player_index)
-            print(action, board[cell_no].title)
+            print(action, board[cell_no].title, sep=" | ")
 
         player_turn = 'MAX'
         if self.player_turn == 'MAX' or self.player_turn == 'MIN':
@@ -227,7 +230,8 @@ class GameState:
             player.pay(100)
             player.cell_no = 9  # index of jail in board
         elif action == 'PAY':
-            player.pay(100)
+            cell = board[cell_no]
+            cell.pay_rent(player)
         elif action == 'UPGRADE':
             cell = board[cell_no]
             if cell.is_upgradable(player):
@@ -349,7 +353,7 @@ class Main:
     def init_players(self):
         players = []
         for i in range(2):
-            players.append(Player(f'Player {i}', self.cells[0], 1500))
+            players.append(Player(f'Player {i}', self.cells[0], 15000))
         return players
 
     def init_cells(self):
