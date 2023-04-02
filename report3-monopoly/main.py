@@ -163,6 +163,8 @@ class GameState:
                     elif cell_no == player.cell_no:
                         if cell.type == 'PLACE':
                             value -= self.get_rent_property(cells_info.CELLS_INFO[cell.title], cell.buildings)
+                        else:
+                            value -= (cell.price / 4)
             evals.append(value)
         return evals
 
@@ -187,7 +189,7 @@ class GameState:
             if cell.owner is None:
                 return ['BUY', 'DO NOTHING']
             elif cell.owner.name == player.name:
-                return ['']
+                return ['DO NOTHING']
             else:
                 return ['PAY']
         elif cell.type == 'PLACE':
@@ -221,7 +223,7 @@ class GameState:
             player.increase(200)
         elif action == 'TAX':
             player.pay(200)
-        elif action == 'GOTO_JAIL':
+        elif action == 'JAIL':
             player.pay(100)
             player.cell_no = 9  # index of jail in board
         elif action == 'PAY':
@@ -296,7 +298,7 @@ class Monopoly:
             return v, m
 
         if state.player_turn == 'MIN':
-            v, m = [math.inf] * len(state.players), None
+            v, m = [-1 * math.inf] * len(state.players), None
             for i in range(2, 13):
                 # after rolling the dice we are in the change node
                 new_cell = (state.players[1].cell_no + i) % len(state.board)
@@ -307,7 +309,7 @@ class Monopoly:
 
                 # we compute value for every possible chance node
                 value, move = self.expecti_minimax(chance_state, 'MAX', depth + 1)
-                if value[1] < v[1]:
+                if value[1] > v[1]:
                     v = value
                     m = chance_state
 
@@ -327,13 +329,13 @@ class Monopoly:
                         move = temp_state
                 return total_value, move
             else:
-                value, move = [math.inf] * len(state.players), None
+                value, move = [-1 * math.inf] * len(state.players), None
                 for action in state.get_actions(state.board[state.players[1].cell_no], state.players[1]):
                     temp_state = state.result(1, state.players[1].cell_no, action, depth)
                     v, m = self.expecti_minimax(temp_state, 'CHANCE', depth + 1)
                     total_value[0] += v[0]
                     total_value[1] += v[1]
-                    if v[1] < value[1]:
+                    if v[1] > value[1]:
                         value = v
                         move = temp_state
                 return total_value, move
@@ -347,7 +349,7 @@ class Main:
     def init_players(self):
         players = []
         for i in range(2):
-            players.append(Player(f'Player {i}', self.cells[0], 150000))
+            players.append(Player(f'Player {i}', self.cells[0], 1500))
         return players
 
     def init_cells(self):
