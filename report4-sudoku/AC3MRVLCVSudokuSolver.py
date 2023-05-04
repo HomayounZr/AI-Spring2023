@@ -29,7 +29,7 @@ class AC3MRVLCVSudokuSolver(AC3SudokuSolver):
         # Build CSP problem
         csp, assigned = self.buildCspProblem(board)
         # Enforce AC3 on initial assignments
-        if not AC3(csp, make_arc_queue(csp, assigned)):
+        if not AC3(csp, makeArcQue(csp, assigned)):
             return False
         # If there's still uncertain choices
         uncertain = []
@@ -57,13 +57,13 @@ class AC3MRVLCVSudokuSolver(AC3SudokuSolver):
         domainlist = list(csp.domains[X])
         domainlist.sort(key=lambda x: self.count_conflict(csp, X, x))
         for x in domainlist:
-            domain_x = csp.domains[X]
+            domainX = csp.domains[X]
             csp.domains[X] = set([x])
-            if AC3(csp, make_arc_queue(csp, [X]), removals):
+            if AC3(csp, makeArcQue(csp, [X]), removals):
                 retval = self.backtrack(csp, uncertain)
                 if retval:
                     return True
             csp.restore_domains(removals)
-            csp.domains[X] = domain_x
+            csp.domains[X] = domainX
         uncertain.append(X)
         return False

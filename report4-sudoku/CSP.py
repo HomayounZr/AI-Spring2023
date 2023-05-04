@@ -1,13 +1,15 @@
 class CSP(object):
-    def __init__(self, variables={}, adj_list={}, domains={}):
+    def __init__(self, variables = [], adjList = {}, domains = {}):
         self.variables = variables
+        self.adjList = adjList
         self.domains = domains
-        self.adj_list = adj_list
 
     def restore_domains(self, removals):
+        """ Undo a supposition and all inferences from it """
         for X in removals:
             self.domains[X] |= removals[X]
 
+    # The following methods are used in min_conflict algorithm
     def nconflicts(self, X1, x, assignment):
         """
         Return the number of conflicts X1 = x has with other variables
@@ -15,7 +17,7 @@ class CSP(object):
         """
         def conflict(X2):
             return self.conflicts(X1, x, X2, assignment[X2])
-        return sum(conflict(X2) for X2 in self.adj_list[X1] if X2 in assignment)
+        return sum(conflict(X2) for X2 in self.adjList[X1] if X2 in assignment)
 
     def conflicted_vars(self, current):
         """ Return a list of variables in conflict in current assignment """

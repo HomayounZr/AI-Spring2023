@@ -8,7 +8,7 @@ class Main:
         print("Homayoun Zarei - 9822019")
         print("AI Report 4 - Sudoku solver using csp")
 
-        with open("general_test.txt", "r") as fd:
+        with open("test.txt", "r") as fd:
             cases = list(map(eval, fd.read().splitlines()))
 
         start = time()
