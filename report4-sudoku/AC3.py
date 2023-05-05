@@ -1,38 +1,58 @@
 # Remeber: Delete from the TAIL!
 from collections import defaultdict
-
+import SudokuCSP
 def AC3(csp, queue=None, removals=defaultdict(set)):
+    """
+    this is the main arc-consistency algorithm
+    :param csp: SudokuCSP problem
+    :param queue: queue of all the arcs
+    :param removals: removed domains
+    :return:
+    """
     # Return False if there is no consistent assignment
     if queue is None:
-        queue = [(Xt, X) for Xt in csp.adjList for X in csp.adjList[Xt]]
+        queue = [(t, x) for t in csp.adj_list for x in csp.adj_list[t]]
     # Queue of arcs of our concern
     while queue:
-        # Xt --> Xh Delete from domain of Xt
-        (Xt, Xh) = queue.pop()
-        if remove_inconsistent_values(csp, Xt, Xh, removals):
-            if not csp.domains[Xt]:
+        # t is the tail of the arc
+        # h is the head of the arc
+        (t, h) = queue.pop()
+        # check if we have inconsistency with other neighbours
+        if remove_inconsistent_values(csp, t, h, removals):
+            # if the domain became empty, then backtrack
+            if not csp.domains[t]:
                 return False
-            # NOTE: Next two lines only for binary "!=" constraint
-            elif len(csp.domains[Xt]) > 1:
+            elif len(csp.domains[t]) > 1:
                 continue
-            for X in csp.adjList[Xt]:
-                if X != Xt:
-                    queue.append((X, Xt))
+
+            # add arcs (x, t) for nodes, adjacent to t
+            for x in csp.adjList[t]:
+                if x != t:
+                    queue.append((x, t))
     return True
 
-def remove_inconsistent_values(csp, Xt, Xh, removals):
+def remove_inconsistent_values(csp, t, h, removals):
+    """
+    this function checks domain values of tail, coressponding to head
+    if there was an incosistency, we remove the value from tail and return True
+    :param csp: SudokuCSP instance
+    :param t: tail
+    :param h: head
+    :param removals: removed domains
+    :return: True if a value was removed
+    """
     # Return True if we remove a value
     revised = False
     # If Xt=x conflicts with Xh=y for every possible y, eliminate Xt=x
-    for x in csp.domains[Xt].copy():
-        for y in csp.domains[Xh]:
-            if not csp.conflicts(*Xt, x, *Xh, y):
+    for x in csp.domains[t].copy():
+        for y in csp.domains[h]:
+            if not csp.conflicts(*t, x, *h, y):
                 break
         else:
-            csp.domains[Xt].remove(x)
-            removals[Xt].add(x)
+            csp.domains[t].remove(x)
+            removals[t].add(x)
             revised = True
     return revised
 
-def makeArcQue(csp, Xs):
+def make_arc_queue(csp, Xs):
     return [(Xt, Xh) for Xh in Xs for Xt in csp.adjList[Xh]]

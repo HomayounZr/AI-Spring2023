@@ -2,51 +2,77 @@ from collections import defaultdict
 from SudokuCSP import SudokuCSP
 import math
 
+
 class SudokuSolver(object):
-    def __addEdge__(self, i, j, adjList, size):
+    def __addEdge__(self, i, j, adj_list, size):
+        """
+        create the edged of the constraint graph
+        for each point in the same row, column or square,
+        create a edge in the graph
+        :param i: row
+        :param j: column
+        :param adj_list: the graph as an adjacency list
+        :param size: size of the board
+        :return: None
+        """
         root = math.floor(math.sqrt(size))
         k = i // root * root + j // root
         for num in range(size):
+            # add items in the same column
             if num != i:
-                adjList[(i, j)].add((num, j))
+                adj_list[(i, j)].add((num, j,))
+            # add items in the same row
             if num != j:
-                adjList[(i, j)].add((i, num))
-            row = num//root + k//root * root
-            col = num%root + k%root * root
+                adj_list[(i, j)].add((i, num))
+            # add items in the same square block
+            row = num // root + k // root * root
+            col = num % root + k % root * root
             if row != i or col != j:
-                adjList[(i, j)].add((row, col))
+                adj_list[(i, j)].add((row, col))
 
     def buildCspProblem(self, board):
-        adjList = defaultdict(set)
-        # Build graph (contraints)
+        """
+        build the csp problem with variable, assignments and domains
+        :param board: 2d array of the puzzle
+        :return: SudokuCSP instance
+        """
+        adj_list = defaultdict(set)
         size = len(board)
+        # create the edges in adjacency list for each item
         for i in range(size):
             for j in range(size):
-                self.__addEdge__(i, j, adjList, size)
-        # Set domains
+                self.__addEdge__(i, j, adj_list, size)
         variables = []
         assigned = []
         domains = {}
+        # find the domains for each item in the puzzle
         for i in range(size):
             for j in range(size):
                 if board[i][j] == '.':
-                    domains[(i, j)] = self.get_domain(board, adjList[(i, j)])
+                    # restrict the domain using get_domain in the beginning of the problem
+                    domains[(i, j)] = self.get_domain(board, adj_list[(i, j)])
                     variables.append((i, j))
                 else:
-                    # domains[(i, j)] = set([int(board[i][j]) - 1])
+                    # if it had a value, then the domain only has one value too
                     domains[(i, j)] = set([int(board[i][j]) - 1])
                     assigned.append((i, j))
-        return SudokuCSP(variables, adjList, domains), assigned
+        return SudokuCSP(variables, adj_list, domains), assigned
 
     def solveSudoku(self, board):
         """
-        :type board: List[List[str]]
-        :rtype: void Do not return anything, modify board in-place instead.
+        this function will be completed in the child classes instead
         """
         pass
 
     def get_domain(self, board, neighbours):
-        default_domain = set(range(9))
+        """
+        find the feasible and valid assignments for a particular point
+        this function removes the domains which will make the assignment invalid
+
+        helps us to do less backtracking
+        :return: a set of feasible values for assigment
+        """
+        default_domain = set(range(len(board)))
         for (row, col) in neighbours:
             value = board[row][col]
             if value != '.' and (int(value) - 1) in default_domain:

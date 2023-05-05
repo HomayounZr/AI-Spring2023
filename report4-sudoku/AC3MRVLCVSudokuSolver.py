@@ -26,22 +26,23 @@ class AC3MRVLCVSudokuSolver(AC3SudokuSolver):
         :type board: List[List[str]]
         :rtype: void Do not return anything, modify board in-place instead.
         """
-        # Build CSP problem
+        # create the csp problems using SudokuCSP::buildCspProblem
         csp, assigned = self.buildCspProblem(board)
-        # Enforce AC3 on initial assignments
-        if not AC3(csp, makeArcQue(csp, assigned)):
+        # run the arc consistency for the initial assignments
+        if not AC3(csp, make_arc_queue(csp, assigned)):
             return False
-        # If there's still uncertain choices
+        # if we still have uncertain choices for at least one item
+        # means we have more than one value in the domain
         uncertain = []
         size = len(board)
         for i in range(size):
             for j in range(size):
                 if len(csp.domains[(i, j)]) > 1:
                     uncertain.append((i, j))
-        # Search with backtracking
+        # do the backtracking search with remaining domains and uncertain variables
         if not self.backtrack(csp, uncertain):
             return False
-        # Fill answer back to input table
+        # when backtrack is complete, make the remaining value the assignment value of the puzzle
         for i in range(size):
             for j in range(size):
                 if board[i][j] == '.':
@@ -50,20 +51,25 @@ class AC3MRVLCVSudokuSolver(AC3SudokuSolver):
         return True
 
     def backtrack(self, csp, uncertain):
+        # if all the variables had only one value in their domain, then RETURN
         if not uncertain:
             return True
+        # get the cell with its minimum remaining values in its domain (MRV)
         X = self.popMin(uncertain, key=lambda X: len(csp.domains[X]))
         removals = defaultdict(set)
-        # Sort the values in domain in the order of LCV and loop in that order
+
         domainlist = list(csp.domains[X])
+        # now we sort the values in the variable domain, based on least conflict with others
         domainlist.sort(key=lambda x: self.count_conflict(csp, X, x))
         for x in domainlist:
             domainX = csp.domains[X]
             csp.domains[X] = set([x])
-            if AC3(csp, makeArcQue(csp, [X]), removals):
+            # if the assignment was consistent, then return
+            if AC3(csp, make_arc_queue(csp, [X]), removals):
                 retval = self.backtrack(csp, uncertain)
                 if retval:
                     return True
+            # if assignment was inconsistent, return the previous state
             csp.restore_domains(removals)
             csp.domains[X] = domainX
         uncertain.append(X)
