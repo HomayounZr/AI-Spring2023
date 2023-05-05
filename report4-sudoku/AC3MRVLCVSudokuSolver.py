@@ -33,16 +33,17 @@ class AC3MRVLCVSudokuSolver(AC3SudokuSolver):
             return False
         # If there's still uncertain choices
         uncertain = []
-        for i in range(9):
-            for j in range(9):
+        size = len(board)
+        for i in range(size):
+            for j in range(size):
                 if len(csp.domains[(i, j)]) > 1:
                     uncertain.append((i, j))
         # Search with backtracking
         if not self.backtrack(csp, uncertain):
             return False
         # Fill answer back to input table
-        for i in range(9):
-            for j in range(9):
+        for i in range(size):
+            for j in range(size):
                 if board[i][j] == '.':
                     assert len(csp.domains[(i, j)]) == 1
                     board[i][j] = str( csp.domains[(i, j)].pop() + 1 )

@@ -13,18 +13,19 @@ class AC3SudokuSolver(SudokuSolver):
         # Build CSP problem
         csp, assigned = self.buildCspProblem(board)
         # Enforce AC3 on initial assignments
-        AC3(csp, make_arc_queue(csp, assigned))
+        AC3(csp, makeArcQue(csp, assigned))
         # If there's still uncertain choices
         uncertain = []
-        for i in range(9):
-            for j in range(9):
+        size = len(board)
+        for i in range(size):
+            for j in range(size):
                 if len(csp.domains[(i, j)]) > 1:
                     uncertain.append((i, j))
         # Search with backtracking
         self.backtrack(csp, uncertain)
         # Fill answer back to input table
-        for i in range(9):
-            for j in range(9):
+        for i in range(size):
+            for j in range(size):
                 if board[i][j] == '.':
                     assert len(csp.domains[(i, j)]) == 1
                     board[i][j] = str(csp.domains[(i, j)].pop() + 1)
@@ -35,13 +36,13 @@ class AC3SudokuSolver(SudokuSolver):
         X = uncertain.pop()
         removals = defaultdict(set)
         for x in csp.domains[X]:
-            domain_x = csp.domains[X]
+            domainX = csp.domains[X]
             csp.domains[X] = set([x])
-            if AC3(csp, make_arc_queue(csp, [X]), removals):
+            if AC3(csp, makeArcQue(csp, [X]), removals):
                 retval = self.backtrack(csp, uncertain)
                 if retval:
                     return True
             csp.restore_domains(removals)
-            csp.domains[X] = domain_x
+            csp.domains[X] = domainX
         uncertain.append(X)
         return False

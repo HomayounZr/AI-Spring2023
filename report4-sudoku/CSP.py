@@ -1,8 +1,9 @@
 class CSP(object):
-    def __init__(self, variables = [], adjList = {}, domains = {}):
+    def __init__(self, variables = [], adjList = {}, domains = {}, size = 9):
         self.variables = variables
         self.adjList = adjList
         self.domains = domains
+        self.size = 9
 
     def restore_domains(self, removals):
         """ Undo a supposition and all inferences from it """

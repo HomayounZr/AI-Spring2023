@@ -1,7 +1,6 @@
 # Remeber: Delete from the TAIL!
 from collections import defaultdict
 
-
 def AC3(csp, queue=None, removals=defaultdict(set)):
     # Return False if there is no consistent assignment
     if queue is None:
