@@ -7,7 +7,7 @@ from random import choice
 class AC3MRVLCVSudokuSolver(AC3SudokuSolver):
     def count_conflict(self, csp, Xi, x):
         cnt = 0
-        for X in csp.adjList[Xi]:
+        for X in csp.adj_list[Xi]:
             if x in csp.domains[X]:
                 cnt += 1
         return cnt
@@ -21,7 +21,7 @@ class AC3MRVLCVSudokuSolver(AC3SudokuSolver):
         array[idx], array[-1] = array[-1], array[idx]
         return array.pop()
 
-    def solveSudoku(self, board):
+    def solve_sudoku(self, board):
         """
         :type board: List[List[str]]
         :rtype: void Do not return anything, modify board in-place instead.

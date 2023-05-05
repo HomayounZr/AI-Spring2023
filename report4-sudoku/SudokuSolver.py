@@ -20,7 +20,7 @@ class SudokuSolver(object):
         for num in range(size):
             # add items in the same column
             if num != i:
-                adj_list[(i, j)].add((num, j,))
+                adj_list[(i, j)].add((num, j))
             # add items in the same row
             if num != j:
                 adj_list[(i, j)].add((i, num))
@@ -49,32 +49,16 @@ class SudokuSolver(object):
         for i in range(size):
             for j in range(size):
                 if board[i][j] == '.':
-                    # restrict the domain using get_domain in the beginning of the problem
-                    domains[(i, j)] = self.get_domain(board, adj_list[(i, j)])
+                    domains[(i, j)] = set(range(size))
                     variables.append((i, j))
                 else:
                     # if it had a value, then the domain only has one value too
                     domains[(i, j)] = set([int(board[i][j]) - 1])
                     assigned.append((i, j))
-        return SudokuCSP(variables, adj_list, domains), assigned
+        return SudokuCSP(variables, adj_list, domains, size), assigned
 
-    def solveSudoku(self, board):
+    def solve_sudoku(self, board):
         """
         this function will be completed in the child classes instead
         """
         pass
-
-    def get_domain(self, board, neighbours):
-        """
-        find the feasible and valid assignments for a particular point
-        this function removes the domains which will make the assignment invalid
-
-        helps us to do less backtracking
-        :return: a set of feasible values for assigment
-        """
-        default_domain = set(range(len(board)))
-        for (row, col) in neighbours:
-            value = board[row][col]
-            if value != '.' and (int(value) - 1) in default_domain:
-                default_domain.remove(int(value) - 1)
-        return default_domain

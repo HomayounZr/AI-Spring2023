@@ -26,6 +26,7 @@ class AC3SudokuSolver(SudokuSolver):
                     uncertain.append((i, j))
         # do the backtracking search with remaining domains and uncertain variables
         self.backtrack(csp, uncertain)
+        print('here')
         # when backtrack is complete, make the remaining value the assignment value of the puzzle
         for i in range(size):
             for j in range(size):
@@ -50,6 +51,7 @@ class AC3SudokuSolver(SudokuSolver):
         for x in csp.domains[X]:
             domainX = csp.domains[X]
             csp.domains[X] = set([x])
+            print(csp.domains)
             # if the assignment was valid
             if AC3(csp, make_arc_queue(csp, [X]), removals):
                 retval = self.backtrack(csp, uncertain)

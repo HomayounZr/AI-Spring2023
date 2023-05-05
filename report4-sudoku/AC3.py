@@ -1,6 +1,6 @@
-# Remeber: Delete from the TAIL!
 from collections import defaultdict
-import SudokuCSP
+
+
 def AC3(csp, queue=None, removals=defaultdict(set)):
     """
     this is the main arc-consistency algorithm
@@ -26,10 +26,11 @@ def AC3(csp, queue=None, removals=defaultdict(set)):
                 continue
 
             # add arcs (x, t) for nodes, adjacent to t
-            for x in csp.adjList[t]:
+            for x in csp.adj_list[t]:
                 if x != t:
                     queue.append((x, t))
     return True
+
 
 def remove_inconsistent_values(csp, t, h, removals):
     """
@@ -43,7 +44,6 @@ def remove_inconsistent_values(csp, t, h, removals):
     """
     # Return True if we remove a value
     revised = False
-    # If Xt=x conflicts with Xh=y for every possible y, eliminate Xt=x
     for x in csp.domains[t].copy():
         for y in csp.domains[h]:
             if not csp.conflicts(*t, x, *h, y):
@@ -54,5 +54,6 @@ def remove_inconsistent_values(csp, t, h, removals):
             revised = True
     return revised
 
-def make_arc_queue(csp, Xs):
-    return [(Xt, Xh) for Xh in Xs for Xt in csp.adjList[Xh]]
+
+def make_arc_queue(csp, s):
+    return [(t, h) for h in s for t in csp.adj_list[h]]
