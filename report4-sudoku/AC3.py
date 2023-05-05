@@ -1,6 +1,7 @@
 from collections import defaultdict
 
 
+
 def AC3(csp, queue=None, removals=defaultdict(set)):
     """
     this is the main arc-consistency algorithm
@@ -11,28 +12,23 @@ def AC3(csp, queue=None, removals=defaultdict(set)):
     """
     # Return False if there is no consistent assignment
     if queue is None:
-        queue = [(t, x) for t in csp.adj_list for x in csp.adj_list[t]]
+        queue = [(Xt, X) for Xt in csp.adjList for X in csp.adjList[Xt]]
     # Queue of arcs of our concern
     while queue:
-        # t is the tail of the arc
-        # h is the head of the arc
-        (t, h) = queue.pop()
-        # check if we have inconsistency with other neighbours
-        if remove_inconsistent_values(csp, t, h, removals):
-            # if the domain became empty, then backtrack
-            if not csp.domains[t]:
+        # Xt --> Xh Delete from domain of Xt
+        (Xt, Xh) = queue.pop()
+        if remove_inconsistent_values(csp, Xt, Xh, removals):
+            if not csp.domains[Xt]:
                 return False
-            elif len(csp.domains[t]) > 1:
+            # NOTE: Next two lines only for binary "!=" constraint
+            elif len(csp.domains[Xt]) > 1:
                 continue
-
-            # add arcs (x, t) for nodes, adjacent to t
-            for x in csp.adj_list[t]:
-                if x != t:
-                    queue.append((x, t))
+            for X in csp.adjList[Xt]:
+                if X != Xt:
+                    queue.append((X, Xt))
     return True
 
-
-def remove_inconsistent_values(csp, t, h, removals):
+def remove_inconsistent_values(csp, Xt, Xh, removals):
     """
     this function checks domain values of tail, coressponding to head
     if there was an incosistency, we remove the value from tail and return True
@@ -44,16 +40,16 @@ def remove_inconsistent_values(csp, t, h, removals):
     """
     # Return True if we remove a value
     revised = False
-    for x in csp.domains[t].copy():
-        for y in csp.domains[h]:
-            if not csp.conflicts(*t, x, *h, y):
+    # If Xt=x conflicts with Xh=y for every possible y, eliminate Xt=x
+    for x in csp.domains[Xt].copy():
+        for y in csp.domains[Xh]:
+            if not csp.conflicts(*Xt, x, *Xh, y):
                 break
         else:
-            csp.domains[t].remove(x)
-            removals[t].add(x)
+            csp.domains[Xt].remove(x)
+            removals[Xt].add(x)
             revised = True
     return revised
 
-
-def make_arc_queue(csp, s):
-    return [(t, h) for h in s for t in csp.adj_list[h]]
+def makeArcQue(csp, Xs):
+    return [(Xt, Xh) for Xh in Xs for Xt in csp.adjList[Xh]]

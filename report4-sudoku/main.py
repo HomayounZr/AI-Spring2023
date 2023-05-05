@@ -20,7 +20,7 @@ class Main:
 
         start = time()
         sol = AC3SudokuSolver()
-        sol.solve_sudoku(self.puzzle)
+        sol.solveSudoku(self.puzzle)
         if not self.check_solution(self.puzzle):
             print("CAN NOT SOLVE THE PUZZLE")
             self.print_board(self.puzzle)
@@ -33,7 +33,7 @@ class Main:
         self.puzzle = deepcopy(self.unsolved_puzzle)
         start = time()
         sol = AC3MRVLCVSudokuSolver()
-        sol.solve_sudoku(self.puzzle)
+        sol.solveSudoku(self.puzzle)
         if not self.check_solution(self.puzzle):
             print("CAN NOT SOLVE THE PUZZLE")
             self.print_board(self.puzzle)
